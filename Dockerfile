@@ -1,6 +1,8 @@
+# Build stage
+FROM composer:latest AS composer
 FROM php:8.2-cli
 
-# Instalar dependências do sistema + ICU dev libraries
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -15,34 +17,39 @@ RUN apt-get update && apt-get install -y \
     npm \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalar extensões PHP (MySQL já incluído via pdo_mysql)
+# Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl
 
-# Instalar Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Copy Composer from official image
+COPY --from=composer /usr/bin/composer /usr/bin/composer
 
-# Diretório de trabalho
+# Set working directory
 WORKDIR /app
 
-# Copiar arquivos
+# Copy application files
 COPY . .
 
-# Instalar dependências
+# Install PHP dependencies
 RUN composer install --optimize-autoloader --no-dev --no-interaction
 
-# Instalar dependências NPM e buildar
+# Install Node dependencies and build assets
 RUN npm ci && npm run build
 
-# Cache do Laravel
-RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
-
-# Permissões
+# Set permissions
 RUN chmod -R 755 storage bootstrap/cache
 
-# Expor porta
+# Cache Laravel configuration (optional, will run again on startup)
+RUN php artisan config:cache || true
+RUN php artisan route:cache || true
+RUN php artisan view:cache || true
+
+# Expose port (Railway uses $PORT dynamically)
 EXPOSE 8080
 
-# Comando de start
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+# Start command with migrations and server
+CMD php artisan config:clear && \
+    php artisan migrate --force && \
+    php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache && \
+    php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
