@@ -12,10 +12,20 @@ RUN apt-get update && apt-get install -y \
     unzip \
     nodejs \
     npm \
+    gnupg2 \
+    unixodbc-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalar extensões PHP (incluindo GD)
-RUN docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip intl
+# Instalar extensões PHP (SEM pdo_pgsql, COM pdo_mysql para compatibilidade)
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl
+
+# Instalar drivers do SQL Server
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql18 \
+    && pecl install sqlsrv pdo_sqlsrv \
+    && docker-php-ext-enable sqlsrv pdo_sqlsrv
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
