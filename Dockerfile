@@ -1,6 +1,6 @@
 FROM php:8.2-cli
 
-# Instalar dependências do sistema
+# Instalar dependências do sistema + ICU dev libraries
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
+    libicu-dev \
     zip \
     unzip \
     nodejs \
@@ -16,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     unixodbc-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Instalar extensões PHP (SEM pdo_pgsql, COM pdo_mysql para compatibilidade)
+# Instalar extensões PHP (SEM pdo_pgsql)
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl
 
 # Instalar drivers do SQL Server
